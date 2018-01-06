@@ -33,9 +33,14 @@ export class ZNumberPipe implements PipeTransform {
       }
 
       // 将原数据转换成字符串形式,包括整数部分与小数部分
-      const sourceValue: string = isUndefined(value) ? '' : typeof value === 'string' ? value : value.toString();
+      let sourceValue: string = isUndefined(value) ? '' : typeof value === 'string' ? value : value.toString();
+      const sourceFractionLength: number = isUndefined(sourceValue.split('.')[1]) ? 0 : sourceValue.split('.')[1].length;
+
+      // 小数位数超出则四舍五入移除右侧位并重建原数据
+      sourceValue = sourceFractionLength > maxFractionDigits ?
+        Number(Number(sourceValue).toFixed(maxFractionDigits)).toString(/* 清零 */) : sourceValue;
       const sourceIntegerValue: string = sourceValue.split('.')[0];
-      const sourceFractionValue: string = isUndefined(sourceValue.split('.')[1]) ? '' : sourceValue.split('.')[1];
+      const sourceFractionValue = isUndefined(sourceValue.split('.')[1]) ? '' : sourceValue.split('.')[1];
       let targetIntegerValue = sourceIntegerValue;
       let targetFractionValue = sourceFractionValue;
 
@@ -46,10 +51,6 @@ export class ZNumberPipe implements PipeTransform {
       const subMinFractionDigits = minFractionDigits <= targetFractionValue.length ? 0 : minFractionDigits - targetFractionValue.length;
       // 小数位数不足右侧补0
       targetFractionValue = targetFractionValue + ZERO.repeat(subMinFractionDigits);
-
-      const subMaxFractionDigits = maxFractionDigits >= targetFractionValue.length ? 0 : targetFractionValue.length - maxFractionDigits;
-      // 小数位数超出则移除右侧位
-      targetFractionValue = targetFractionValue.substring(0, targetFractionValue.length - subMaxFractionDigits);
 
       // 拼接数据,返回目标字符串
       const targetValue = `${targetIntegerValue}${targetFractionValue.length > 0 ? '.' : ''}${targetFractionValue}`;
