@@ -1,12 +1,61 @@
-import { Pipe, PipeTransform } from '@angular/core';
+import {Pipe, PipeTransform} from '@angular/core';
+import {isUndefined} from 'util';
 
+const ZERO = '0';
+
+/* digitInfo is a string which has a following format:
+ {minIntegerDigits}.{minFractionDigits}-{maxFractionDigits} */
 @Pipe({
   name: 'zNumber'
 })
 export class ZNumberPipe implements PipeTransform {
 
   transform(value: any, args?: any): any {
-    return null;
-  }
+    try {
+      let minIntegerDigits, minFractionDigits, maxFractionDigits;
+      if (isUndefined(args)) {
+        // 未定义则使用默认值：整数最小1位，小数部分最小0位，最大2位。
+        minIntegerDigits = 1;
+        minFractionDigits = 0;
+        maxFractionDigits = 2;
+      } else {
+        // 定义则使用设置值
+        const tempParts: string[] = args.split('.');
+        const integerDigits: string = tempParts[0];
+        const fractionDigits: string = tempParts[1];
+        minIntegerDigits = Number(integerDigits);
+        minFractionDigits = Number(fractionDigits.split('-')[0]);
+        maxFractionDigits = Number(fractionDigits.split('-')[1]);
 
+        if (minFractionDigits > maxFractionDigits) {
+          throw new Error('minFractionDigits cannot greater than maxFractionDigits.');
+        }
+      }
+
+      // 将原数据转换成字符串形式,包括整数部分与小数部分
+      const sourceValue: string = isUndefined(value) ? '' : typeof value === 'string' ? value : value.toString();
+      const sourceIntegerValue: string = sourceValue.split('.')[0];
+      const sourceFractionValue: string = isUndefined(sourceValue.split('.')[1]) ? '' : sourceValue.split('.')[1];
+      let targetIntegerValue = sourceIntegerValue;
+      let targetFractionValue = sourceFractionValue;
+
+      const subMinIntegerDigits = minIntegerDigits <= targetIntegerValue.length ? 0 : minIntegerDigits - targetIntegerValue.length;
+      // 整数位数不足左侧补0
+      targetIntegerValue = ZERO.repeat(subMinIntegerDigits) + targetIntegerValue;
+
+      const subMinFractionDigits = minFractionDigits <= targetFractionValue.length ? 0 : minFractionDigits - targetFractionValue.length;
+      // 小数位数不足右侧补0
+      targetFractionValue = targetFractionValue + ZERO.repeat(subMinFractionDigits);
+
+      const subMaxFractionDigits = maxFractionDigits >= targetFractionValue.length ? 0 : targetFractionValue.length - maxFractionDigits;
+      // 小数位数超出则移除右侧位
+      targetFractionValue = targetFractionValue.substring(0, targetFractionValue.length - subMaxFractionDigits);
+
+      // 拼接数据,返回目标字符串
+      const targetValue = `${targetIntegerValue}${targetFractionValue.length > 0 ? '.' : ''}${targetFractionValue}`;
+      return targetValue;
+    } catch (ex) {
+      throw new Error('args formatting error,use example like "1.0-2".');
+    }
+  }
 }
